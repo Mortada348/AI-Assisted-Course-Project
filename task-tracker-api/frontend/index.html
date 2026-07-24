@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="javascript.js"></script>
+    <title>Task Tracker Kanban</title>
+    <link rel="stylesheet" href="styling.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div class="title-group">
+          <h1>Task Tracker Kanban</h1>
+          <p>
+            Organize tasks into a simple Kanban workflow and preview the board
+            layout before wiring in real task data.
+          </p>
+        </div>
+        <div class="header-actions">
+          <button class="button" type="button" id="new-task-button">
+            New Task
+          </button>
+        </div>
+      </header>
+
+      <div class="modal-overlay hidden" id="task-modal-overlay">
+        <div
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="task-modal-title"
+        >
+          <button
+            class="modal-close"
+            type="button"
+            id="task-modal-close"
+            aria-label="Close modal"
+          >
+            ×
+          </button>
+          <h2 id="task-modal-title">New Task</h2>
+          <form id="task-form">
+            <div
+              class="form-error hidden"
+              id="modal-form-error"
+              role="alert"
+            ></div>
+            <input type="hidden" name="taskId" value="" />
+
+            <div class="form-row">
+              <label for="task-title">Title</label>
+              <input id="task-title" name="title" type="text" />
+              <div class="field-error hidden" id="title-error">
+                Title is required
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="task-description">Description</label>
+              <textarea
+                id="task-description"
+                name="description"
+                rows="4"
+              ></textarea>
+            </div>
+
+            <div class="form-row form-grid">
+              <div>
+                <label for="task-status">Status</label>
+                <select id="task-status" name="status">
+                  <option value="ToDo">To Do</option>
+                  <option value="InProgress">In Progress</option>
+                  <option value="Done">Done</option>
+                </select>
+              </div>
+              <div>
+                <label for="task-priority">Priority</label>
+                <select id="task-priority" name="priority">
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label for="task-assignee">Assignee</label>
+              <input id="task-assignee" name="assignee" type="text" />
+            </div>
+
+            <div class="modal-actions">
+              <button class="button" type="submit">Save task</button>
+              <button
+                class="button button--secondary"
+                type="button"
+                id="modal-cancel-button"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <section class="board" aria-label="Kanban board">
+        <article class="column" data-status="ToDo">
+          <div>
+            <div class="column-label">To Do</div>
+            <div class="column-count">1 task</div>
+          </div>
+          <ul class="card-list">
+            <li class="card" data-task-id="task-1">
+              <h2 class="card-title">Plan onboarding flow</h2>
+              <p class="card-description">
+                Define the first steps and success criteria for new users.
+              </p>
+              <div class="card-meta">
+                <span class="badge badge--priority">High priority</span>
+                <span class="badge badge--assignee">Unassigned</span>
+              </div>
+              <div class="card-actions">
+                <button class="button" type="button">Edit</button>
+              </div>
+            </li>
+          </ul>
+        </article>
+
+        <article class="column" data-status="InProgress">
+          <div>
+            <div class="column-label">In Progress</div>
+            <div class="column-count">1 task</div>
+          </div>
+          <ul class="card-list">
+            <li class="card" data-task-id="task-2">
+              <h2 class="card-title">Implement task detail view</h2>
+              <p class="card-description">
+                Build the details panel that shows status, priority, and
+                assignee data.
+              </p>
+              <div class="card-meta">
+                <span class="badge badge--priority">Medium priority</span>
+                <span class="badge badge--assignee">Avery</span>
+              </div>
+              <div class="card-actions">
+                <button class="button" type="button">Edit</button>
+              </div>
+            </li>
+          </ul>
+        </article>
+
+        <article class="column" data-status="Done">
+          <div>
+            <div class="column-label">Done</div>
+            <div class="column-count">1 task</div>
+          </div>
+          <ul class="card-list">
+            <li class="card" data-task-id="task-3">
+              <h2 class="card-title">Set up project repo</h2>
+              <p class="card-description">
+                Create repository structure, initial README, and basic app
+                scaffolding.
+              </p>
+              <div class="card-meta">
+                <span class="badge badge--priority">Low priority</span>
+                <span class="badge badge--assignee">Jordan</span>
+              </div>
+              <div class="card-actions">
+                <button class="button" type="button">Edit</button>
+              </div>
+            </li>
+          </ul>
+        </article>
+      </section>
+    </div>
+  </body>
+</html>
