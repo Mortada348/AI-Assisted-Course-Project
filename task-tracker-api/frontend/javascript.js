@@ -71,11 +71,12 @@ function createCard(task) {
     meta.appendChild(dueDate);
   }
 
+  const overdueBadge = document.createElement("span");
+  overdueBadge.className = `badge ${task.is_overdue ? "badge--overdue" : "badge--not-overdue"}`;
+  overdueBadge.textContent = task.is_overdue ? "Overdue" : "Not overdue";
+  meta.appendChild(overdueBadge);
+
   if (task.is_overdue) {
-    const overdueBadge = document.createElement("span");
-    overdueBadge.className = "badge badge--overdue";
-    overdueBadge.textContent = "Overdue";
-    meta.appendChild(overdueBadge);
     card.classList.add("card--overdue");
   }
 
