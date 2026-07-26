@@ -27,6 +27,12 @@ function sortTasks(taskList) {
   });
 }
 
+function getTomorrowDateString() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split("T")[0];
+}
+
 function createCard(task) {
   const card = document.createElement("li");
   card.className = "card";
@@ -57,6 +63,21 @@ function createCard(task) {
   assignee.className = "badge badge--assignee";
   assignee.textContent = escapeText(task.assignee || "Unassigned");
   meta.appendChild(assignee);
+
+  if (task.due_date) {
+    const dueDate = document.createElement("span");
+    dueDate.className = "badge badge--due-date";
+    dueDate.textContent = `Due ${escapeText(task.due_date)}`;
+    meta.appendChild(dueDate);
+  }
+
+  if (task.is_overdue) {
+    const overdueBadge = document.createElement("span");
+    overdueBadge.className = "badge badge--overdue";
+    overdueBadge.textContent = "Overdue";
+    meta.appendChild(overdueBadge);
+    card.classList.add("card--overdue");
+  }
 
   card.appendChild(meta);
 
@@ -220,6 +241,7 @@ async function onColumnDrop(event) {
 
 function clearModalErrors() {
   modalElements.titleError.classList.add("hidden");
+  modalElements.dueDateError.classList.add("hidden");
   modalElements.formError.classList.add("hidden");
   modalElements.formError.textContent = "";
 }
@@ -231,6 +253,8 @@ function openModal(mode, task = null) {
     mode === "edit" ? "Edit Task" : "New Task";
   clearModalErrors();
 
+  modalElements.dueDateInput.min = getTomorrowDateString();
+
   if (mode === "edit" && task) {
     modalElements.taskIdInput.value = String(task.id);
     modalElements.titleInput.value = task.title || "";
@@ -238,11 +262,13 @@ function openModal(mode, task = null) {
     modalElements.statusInput.value = task.status || "ToDo";
     modalElements.priorityInput.value = task.priority || "Low";
     modalElements.assigneeInput.value = task.assignee || "";
+    modalElements.dueDateInput.value = task.due_date || "";
   } else {
     modalElements.form.reset();
     modalElements.taskIdInput.value = "";
     modalElements.statusInput.value = "ToDo";
     modalElements.priorityInput.value = "Low";
+    modalElements.dueDateInput.value = "";
   }
 
   modalElements.titleInput.focus();
@@ -270,9 +296,15 @@ async function handleModalSubmit(event) {
   const priority = modalElements.priorityInput.value;
   const assigneeRaw = modalElements.assigneeInput.value.trim();
   const assignee = assigneeRaw === "" ? null : assigneeRaw;
+  const dueDate = modalElements.dueDateInput.value;
 
   if (!title) {
     modalElements.titleError.classList.remove("hidden");
+    return;
+  }
+
+  if (!dueDate) {
+    modalElements.dueDateError.classList.remove("hidden");
     return;
   }
 
@@ -282,6 +314,7 @@ async function handleModalSubmit(event) {
     status,
     priority,
     assignee,
+    due_date: dueDate,
   };
 
   const mode = modalElements.form.dataset.mode === "edit" ? "edit" : "create";
@@ -330,6 +363,9 @@ function setupModal() {
     statusInput: document.getElementById("task-status"),
     priorityInput: document.getElementById("task-priority"),
     assigneeInput: document.getElementById("task-assignee"),
+    dueDateInput: document.getElementById("task-due-date"),
+    dueDateError: document.getElementById("due-date-error"),
+    filterOverdueInput: document.getElementById("filter-overdue"),
     taskIdInput: document.querySelector("input[name='taskId']"),
     titleError: document.getElementById("title-error"),
     formError: document.getElementById("modal-form-error"),
@@ -350,6 +386,7 @@ function setupModal() {
     }
   });
   modalElements.form.addEventListener("submit", handleModalSubmit);
+  modalElements.filterOverdueInput.addEventListener("change", fetchTasks);
   document.addEventListener("keydown", (event) => {
     if (
       event.key === "Escape" &&
@@ -362,8 +399,13 @@ function setupModal() {
 
 async function fetchTasks() {
   try {
-    console.log(`[GET /tasks] Fetching from ${backendBaseUrl}/tasks`);
-    const response = await fetch(`${backendBaseUrl}/tasks`);
+    const params = new URLSearchParams();
+    if (modalElements.filterOverdueInput.checked) {
+      params.set("not_overdue", "true");
+    }
+    const url = `${backendBaseUrl}/tasks${params.toString() ? `?${params}` : ""}`;
+    console.log(`[GET /tasks] Fetching from ${url}`);
+    const response = await fetch(url);
     console.log(`[GET /tasks] Response status: ${response.status}`);
 
     if (!response.ok) {
