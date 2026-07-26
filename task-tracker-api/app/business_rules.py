@@ -19,6 +19,37 @@ def validate_status_transition(current: TaskStatus, new: TaskStatus) -> None:
         )
 
 
+def validate_tag(tag: str) -> str:
+    stripped = tag.strip()
+    if not stripped:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="tag cannot be blank",
+        )
+    return stripped
+
+
+def validate_no_duplicate_tags(tags: list[str]) -> list[str]:
+    cleaned_tags: list[str] = []
+    seen: set[str] = set()
+    for tag in tags:
+        normalized = tag.casefold()
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        cleaned_tags.append(tag)
+    return cleaned_tags
+
+
+def validate_tag_removal(existing_tags: list[str], tag_to_remove: str) -> None:
+    normalized_target = tag_to_remove.strip().casefold()
+    if not any(tag.casefold() == normalized_target for tag in existing_tags):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Tag '{tag_to_remove}' does not exist and cannot be removed",
+        )
+
+
 def is_task_overdue(due_date: date | None, status_: TaskStatus) -> bool:
     if due_date is None:
         return False

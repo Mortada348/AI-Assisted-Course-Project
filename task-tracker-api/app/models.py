@@ -25,6 +25,7 @@ class TaskCreate(BaseModel):
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority = TaskPriority.MEDIUM
     assignee: Optional[str] = None
+    tags: list[str] = []
     due_date: Optional[date] = None
 
     @field_validator("title")
@@ -36,6 +37,28 @@ class TaskCreate(BaseModel):
         if len(stripped) > 200:
             raise ValueError("title must be at most 200 characters")
         return stripped
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def validate_tags(cls, v):
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            raise TypeError("tags must be a list of strings")
+        cleaned_tags: list[str] = []
+        seen: dict[str, bool] = {}
+        for tag in v:
+            if not isinstance(tag, str):
+                raise TypeError("tags must be a list of strings")
+            stripped = tag.strip()
+            if not stripped:
+                raise ValueError("tags cannot contain empty or blank values")
+            key = stripped.casefold()
+            if key in seen:
+                continue
+            seen[key] = True
+            cleaned_tags.append(stripped)
+        return cleaned_tags
 
     @field_validator("due_date", mode="before")
     @classmethod
@@ -68,7 +91,10 @@ class TaskUpdate(BaseModel):
     status: Optional[TaskStatus] = None
     priority: Optional[TaskPriority] = None
     assignee: Optional[str] = None
+    tags: list[str] = []
     due_date: Optional[date] = None
+    add_tags: Optional[list[str]] = None
+    remove_tags: Optional[list[str]] = None
 
     @field_validator("title")
     @classmethod
@@ -81,6 +107,28 @@ class TaskUpdate(BaseModel):
         if len(stripped) > 200:
             raise ValueError("title must be at most 200 characters")
         return stripped
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def validate_tags(cls, v):
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            raise TypeError("tags must be a list of strings")
+        cleaned_tags: list[str] = []
+        seen: dict[str, bool] = {}
+        for tag in v:
+            if not isinstance(tag, str):
+                raise TypeError("tags must be a list of strings")
+            stripped = tag.strip()
+            if not stripped:
+                raise ValueError("tags cannot contain empty or blank values")
+            key = stripped.casefold()
+            if key in seen:
+                continue
+            seen[key] = True
+            cleaned_tags.append(stripped)
+        return cleaned_tags
 
     @field_validator("due_date", mode="before")
     @classmethod
@@ -114,6 +162,7 @@ class TaskResponse(BaseModel):
     status: TaskStatus
     priority: TaskPriority
     assignee: Optional[str]
+    tags: list[str] = []
     due_date: Optional[date] = None
     is_overdue: bool = False
     created_at: datetime
