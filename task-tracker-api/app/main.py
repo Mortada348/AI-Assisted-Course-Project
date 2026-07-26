@@ -46,8 +46,9 @@ app.include_router(health_router)
 def list_tasks(
     status: TaskStatus | None = None,
     priority: TaskPriority | None = None,
+    not_overdue: bool | None = None,
 ) -> list[TaskResponse]:
-    tasks = storage.get_all_tasks(status=status, priority=priority)
+    tasks = storage.get_all_tasks(status=status, priority=priority, not_overdue=not_overdue)
     print(f"[GET /tasks] Returning {len(tasks)} tasks: {[t.model_dump() for t in tasks]}")
     return tasks
 

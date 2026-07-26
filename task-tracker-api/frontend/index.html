@@ -18,6 +18,10 @@
           </p>
         </div>
         <div class="header-actions">
+          <label class="filter-checkbox">
+            <input id="filter-overdue" type="checkbox" />
+            Hide overdue tasks
+          </label>
           <button class="button" type="button" id="new-task-button">
             New Task
           </button>
@@ -87,6 +91,14 @@
             <div class="form-row">
               <label for="task-assignee">Assignee</label>
               <input id="task-assignee" name="assignee" type="text" />
+            </div>
+
+            <div class="form-row">
+              <label for="task-due-date">Due date</label>
+              <input id="task-due-date" name="due_date" type="date" required />
+              <div class="field-error hidden" id="due-date-error">
+                Due date is required
+              </div>
             </div>
 
             <div class="modal-actions">

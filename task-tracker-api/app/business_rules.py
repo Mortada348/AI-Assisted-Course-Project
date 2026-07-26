@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from datetime import date
 
 from app.models import TaskStatus
 
@@ -16,3 +17,11 @@ def validate_status_transition(current: TaskStatus, new: TaskStatus) -> None:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid status transition from {current.value} to {new.value}. Allowed transitions: {allowed}",
         )
+
+
+def is_task_overdue(due_date: date | None, status_: TaskStatus) -> bool:
+    if due_date is None:
+        return False
+    if status_ == TaskStatus.DONE:
+        return False
+    return due_date < date.today()

@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from pydantic import ValidationError
 from app.models import TaskCreate, TaskUpdate, TaskStatus, TaskPriority
 def expect_fail(label, fn):
@@ -37,4 +38,17 @@ expect_fail("id rejected on TaskCreate", lambda: TaskCreate(title="x", id="abc")
 expect_fail("created_at rejected on TaskUpdate", lambda: TaskUpdate(created_at="2025-01-01T00:00:00Z"))
 # 8. Invalid enum value rejected
 expect_fail("invalid status rejected", lambda: TaskCreate(title="x", status="Whatever"))
+# 9. due_date today rejected on TaskCreate
+expect_fail("due_date today rejected on TaskCreate", lambda: TaskCreate(title="x", due_date=date.today()))
+# 10. due_date past rejected on TaskCreate
+expect_fail("due_date past rejected on TaskCreate", lambda: TaskCreate(title="x", due_date=date.today() - timedelta(days=1)))
+# 11. due_date future accepted on TaskCreate
+expect_ok("due_date future accepted on TaskCreate", lambda: TaskCreate(title="x", due_date=date.today() + timedelta(days=1)))
+# 12. due_date today rejected on TaskUpdate
+expect_fail("due_date today rejected on TaskUpdate", lambda: TaskUpdate(due_date=date.today()))
+# 13. due_date past rejected on TaskUpdate
+expect_fail("due_date past rejected on TaskUpdate", lambda: TaskUpdate(due_date=date.today() - timedelta(days=1)))
+# 14. due_date future accepted on TaskUpdate
+expect_ok("due_date future accepted on TaskUpdate", lambda: TaskUpdate(due_date=date.today() + timedelta(days=1)))
 print("--- Part A verifications complete ---")
+print("--- Part B verifications complete ---")
