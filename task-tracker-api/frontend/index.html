@@ -94,6 +94,26 @@
             </div>
 
             <div class="form-row">
+              <label for="task-tag-input">Tags</label>
+              <div class="tag-input-group">
+                <input
+                  id="task-tag-input"
+                  type="text"
+                  placeholder="Type tag and press Enter"
+                />
+                <button
+                  class="button button--sm"
+                  type="button"
+                  id="tag-add-button"
+                >
+                  Add
+                </button>
+              </div>
+              <div id="task-tags-container" class="tags-container"></div>
+              <div class="field-error hidden" id="tag-error"></div>
+            </div>
+
+            <div class="form-row">
               <label for="task-due-date">Due date</label>
               <input id="task-due-date" name="due_date" type="date" required />
               <div class="field-error hidden" id="due-date-error">
@@ -112,6 +132,23 @@
               </button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="tag-filter-group">
+          <label>Filter by tag:</label>
+          <div id="tag-filter-container" class="tag-filter-chips"></div>
+          <button
+            class="button button--tertiary"
+            type="button"
+            id="clear-tag-filter-button"
+          >
+            Clear Filter
+          </button>
+        </div>
+        <div id="no-results-message" class="no-results hidden">
+          No matching tasks found
         </div>
       </div>
 

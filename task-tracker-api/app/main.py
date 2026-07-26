@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
 from app import storage
-from app.business_rules import validate_status_transition
+from app.business_rules import validate_status_transition, validate_tag_removal
 from app.models import TaskCreate, TaskPriority, TaskResponse, TaskStatus, TaskUpdate
 from app.core.config import settings
 
@@ -47,9 +47,26 @@ def list_tasks(
     status: TaskStatus | None = None,
     priority: TaskPriority | None = None,
     not_overdue: bool | None = None,
+    tag: str | None = None,
 ) -> list[TaskResponse]:
-    tasks = storage.get_all_tasks(status=status, priority=priority, not_overdue=not_overdue)
+    if tag is not None:
+        tasks = storage.get_tasks_by_tag(tag)
+        if status is not None:
+            tasks = [t for t in tasks if t.status == status]
+        if priority is not None:
+            tasks = [t for t in tasks if t.priority == priority]
+        if not_overdue is True:
+            tasks = [t for t in tasks if t.due_date is not None and not t.is_overdue]
+    else:
+        tasks = storage.get_all_tasks(status=status, priority=priority, not_overdue=not_overdue)
     print(f"[GET /tasks] Returning {len(tasks)} tasks: {[t.model_dump() for t in tasks]}")
+    return tasks
+
+
+@app.get("/tasks/search", response_model=list[TaskResponse], tags=["tasks"])
+def search_tasks(tag: str) -> list[TaskResponse]:
+    tasks = storage.search_tasks_by_tag(tag)
+    print(f"[GET /tasks/search] Returning {len(tasks)} tasks for tag '{tag}': {[t.model_dump() for t in tasks]}")
     return tasks
 
 
@@ -68,11 +85,23 @@ def get_task(task_id: str) -> TaskResponse:
 
 @app.patch("/tasks/{task_id}", response_model=TaskResponse, tags=["tasks"])
 def update_task(task_id: str, payload: TaskUpdate) -> TaskResponse:
-    if payload.status is not None:
+    updates = payload.model_dump(exclude_unset=True)
+    existing: TaskResponse | None = None
+    if payload.status is not None or any(key in updates for key in ("tag_to_remove", "remove_tag", "remove_tags", "add_tags")):
         existing = storage.get_task_by_id(task_id)
         if existing is None:
             raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
-        validate_status_transition(existing.status, payload.status)
+    if payload.status is not None and existing is not None:
+        if payload.status != existing.status:
+            validate_status_transition(existing.status, payload.status)
+    if existing is not None:
+        if "tag_to_remove" in updates:
+            validate_tag_removal(existing.tags, updates["tag_to_remove"])
+        if "remove_tag" in updates:
+            validate_tag_removal(existing.tags, updates["remove_tag"])
+        if "remove_tags" in updates:
+            for tag in updates["remove_tags"]:
+                validate_tag_removal(existing.tags, tag)
     task = storage.update_task(task_id, payload)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")

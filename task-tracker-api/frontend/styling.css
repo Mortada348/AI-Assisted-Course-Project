@@ -61,11 +61,11 @@ header {
   color: #991b1b;
 }
 
-.card--overdue {
-  border-color: #fca5a5;
+.badge--not-overdue {
+  background: #e8f0fe;
+  color: #1d4ed8;
 }
 
-.title-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -155,6 +155,12 @@ header {
   align-items: center;
 }
 
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -202,6 +208,127 @@ header {
   background: #e5e7eb;
 }
 
+.button--sm {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.button--tertiary {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.button--tertiary:hover {
+  background: #e5e7eb;
+}
+
+.tag-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.tag-input-group input {
+  flex: 1;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.tag-chip.new {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.tag-chip-remove:hover {
+  opacity: 0.7;
+}
+
+.filter-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.tag-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tag-filter-group label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tag-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-filter-chip {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag-filter-chip:hover {
+  background: #e0e7ff;
+  border-color: #3730a3;
+}
+
+.tag-filter-chip.active {
+  background: #3730a3;
+  color: white;
+  border-color: #3730a3;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.no-results.hidden {
+  display: none !important;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -219,6 +346,8 @@ header {
 
 .modal {
   width: min(640px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   background: var(--surface);
   border-radius: 20px;
   padding: 28px;

@@ -5,6 +5,10 @@ const priorityOrder = { High: 1, Medium: 2, Low: 3 };
 
 let dragState = null;
 let modalElements = {};
+let currentTagFilter = null;
+let modalTags = [];
+let modalOriginalTags = [];
+let removedTagsInSession = [];
 
 function escapeText(value) {
   return String(value ?? "");
@@ -71,15 +75,28 @@ function createCard(task) {
     meta.appendChild(dueDate);
   }
 
+  const overdueBadge = document.createElement("span");
+  overdueBadge.className = `badge ${task.is_overdue ? "badge--overdue" : "badge--not-overdue"}`;
+  overdueBadge.textContent = task.is_overdue ? "Overdue" : "Not overdue";
+  meta.appendChild(overdueBadge);
+
   if (task.is_overdue) {
-    const overdueBadge = document.createElement("span");
-    overdueBadge.className = "badge badge--overdue";
-    overdueBadge.textContent = "Overdue";
-    meta.appendChild(overdueBadge);
     card.classList.add("card--overdue");
   }
 
   card.appendChild(meta);
+
+  if (task.tags && task.tags.length > 0) {
+    const tagsDiv = document.createElement("div");
+    tagsDiv.className = "card-tags";
+    task.tags.forEach((tag) => {
+      const tagChip = document.createElement("span");
+      tagChip.className = "tag-chip";
+      tagChip.textContent = escapeText(tag);
+      tagsDiv.appendChild(tagChip);
+    });
+    card.appendChild(tagsDiv);
+  }
 
   const actions = document.createElement("div");
   actions.className = "card-actions";
@@ -101,6 +118,14 @@ function createCard(task) {
 
 function renderBoard(currentTasks) {
   const rawTasks = Array.isArray(currentTasks) ? currentTasks : [];
+  const noResultsMsg = document.getElementById("no-results-message");
+
+  if (currentTagFilter && rawTasks.length === 0) {
+    noResultsMsg.classList.remove("hidden");
+  } else {
+    noResultsMsg.classList.add("hidden");
+  }
+
   const grouped = {
     ToDo: [],
     InProgress: [],
@@ -244,6 +269,73 @@ function clearModalErrors() {
   modalElements.dueDateError.classList.add("hidden");
   modalElements.formError.classList.add("hidden");
   modalElements.formError.textContent = "";
+  modalElements.tagError.classList.add("hidden");
+  modalElements.tagError.textContent = "";
+}
+
+function renderModalTags() {
+  const container = modalElements.tagsContainer;
+  container.innerHTML = "";
+
+  modalTags.forEach((tag, index) => {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip";
+    chip.dataset.index = index;
+
+    const isNewTag = !modalOriginalTags.includes(tag);
+    if (isNewTag) {
+      chip.classList.add("new");
+    }
+
+    const label = document.createElement("span");
+    label.textContent = escapeText(tag);
+    chip.appendChild(label);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "tag-chip-remove";
+    removeBtn.type = "button";
+    removeBtn.textContent = "×";
+    removeBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      removeModalTag(index);
+    });
+    chip.appendChild(removeBtn);
+
+    container.appendChild(chip);
+  });
+}
+
+function addModalTag(tagValue) {
+  const trimmed = tagValue.trim();
+
+  if (!trimmed) {
+    modalElements.tagError.textContent = "Tag cannot be empty";
+    modalElements.tagError.classList.remove("hidden");
+    return false;
+  }
+
+  const normalized = trimmed.toLowerCase();
+  if (modalTags.some((t) => t.toLowerCase() === normalized)) {
+    modalElements.tagError.textContent = "Duplicate tag (case-insensitive)";
+    modalElements.tagError.classList.remove("hidden");
+    return false;
+  }
+
+  modalElements.tagError.classList.add("hidden");
+  modalElements.tagError.textContent = "";
+  modalTags.push(trimmed);
+  renderModalTags();
+  modalElements.tagInput.value = "";
+  return true;
+}
+
+function removeModalTag(index) {
+  const tag = modalTags[index];
+  if (modalOriginalTags.includes(tag)) {
+    removedTagsInSession.push(tag);
+  }
+  modalTags.splice(index, 1);
+  renderModalTags();
 }
 
 function openModal(mode, task = null) {
@@ -255,6 +347,10 @@ function openModal(mode, task = null) {
 
   modalElements.dueDateInput.min = getTomorrowDateString();
 
+  modalTags = [];
+  modalOriginalTags = [];
+  removedTagsInSession = [];
+
   if (mode === "edit" && task) {
     modalElements.taskIdInput.value = String(task.id);
     modalElements.titleInput.value = task.title || "";
@@ -263,6 +359,8 @@ function openModal(mode, task = null) {
     modalElements.priorityInput.value = task.priority || "Low";
     modalElements.assigneeInput.value = task.assignee || "";
     modalElements.dueDateInput.value = task.due_date || "";
+    modalOriginalTags = task.tags ? [...task.tags] : [];
+    modalTags = [...modalOriginalTags];
   } else {
     modalElements.form.reset();
     modalElements.taskIdInput.value = "";
@@ -271,6 +369,7 @@ function openModal(mode, task = null) {
     modalElements.dueDateInput.value = "";
   }
 
+  renderModalTags();
   modalElements.titleInput.focus();
 }
 
@@ -278,6 +377,10 @@ function closeModal() {
   modalElements.overlay.classList.add("hidden");
   modalElements.form.reset();
   clearModalErrors();
+  modalTags = [];
+  modalOriginalTags = [];
+  removedTagsInSession = [];
+  renderModalTags();
 }
 
 function setFormError(message) {
@@ -318,6 +421,14 @@ async function handleModalSubmit(event) {
   };
 
   const mode = modalElements.form.dataset.mode === "edit" ? "edit" : "create";
+
+  if (mode === "create") {
+    payload.tags = modalTags;
+  } else if (mode === "edit") {
+    payload.add_tags = modalTags.filter((t) => !modalOriginalTags.includes(t));
+    payload.remove_tags = removedTagsInSession;
+  }
+
   const url =
     mode === "edit"
       ? `${backendBaseUrl}/tasks/${taskId}`
@@ -369,6 +480,10 @@ function setupModal() {
     taskIdInput: document.querySelector("input[name='taskId']"),
     titleError: document.getElementById("title-error"),
     formError: document.getElementById("modal-form-error"),
+    tagInput: document.getElementById("task-tag-input"),
+    tagAddButton: document.getElementById("tag-add-button"),
+    tagsContainer: document.getElementById("task-tags-container"),
+    tagError: document.getElementById("tag-error"),
   };
 
   document
@@ -380,6 +495,16 @@ function setupModal() {
   document
     .getElementById("modal-cancel-button")
     .addEventListener("click", closeModal);
+  modalElements.tagAddButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    addModalTag(modalElements.tagInput.value);
+  });
+  modalElements.tagInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addModalTag(modalElements.tagInput.value);
+    }
+  });
   modalElements.overlay.addEventListener("click", (event) => {
     if (event.target === modalElements.overlay) {
       closeModal();
@@ -403,6 +528,9 @@ async function fetchTasks() {
     if (modalElements.filterOverdueInput.checked) {
       params.set("not_overdue", "true");
     }
+    if (currentTagFilter) {
+      params.set("tag", currentTagFilter);
+    }
     const url = `${backendBaseUrl}/tasks${params.toString() ? `?${params}` : ""}`;
     console.log(`[GET /tasks] Fetching from ${url}`);
     const response = await fetch(url);
@@ -420,6 +548,7 @@ async function fetchTasks() {
       tasks.push(...data);
     }
 
+    updateTagFilterUI();
     renderBoard(tasks);
   } catch (error) {
     console.error("Task loading error:", error);
@@ -427,8 +556,53 @@ async function fetchTasks() {
   }
 }
 
+function extractAvailableTags() {
+  const tagsSet = new Set();
+  tasks.forEach((task) => {
+    if (task.tags && Array.isArray(task.tags)) {
+      task.tags.forEach((tag) => {
+        tagsSet.add(tag);
+      });
+    }
+  });
+  return Array.from(tagsSet).sort();
+}
+
+function updateTagFilterUI() {
+  const container = document.getElementById("tag-filter-container");
+  container.innerHTML = "";
+
+  const availableTags = extractAvailableTags();
+
+  availableTags.forEach((tag) => {
+    const chip = document.createElement("button");
+    chip.className = "tag-filter-chip";
+    chip.type = "button";
+    chip.textContent = escapeText(tag);
+
+    if (currentTagFilter === tag) {
+      chip.classList.add("active");
+    }
+
+    chip.addEventListener("click", () => {
+      currentTagFilter = tag;
+      fetchTasks();
+    });
+
+    container.appendChild(chip);
+  });
+}
+
+function clearTagFilter() {
+  currentTagFilter = null;
+  fetchTasks();
+}
+
 function init() {
   setupModal();
+  document
+    .getElementById("clear-tag-filter-button")
+    .addEventListener("click", clearTagFilter);
   fetchTasks();
 }
 
