@@ -50,5 +50,47 @@ expect_fail("due_date today rejected on TaskUpdate", lambda: TaskUpdate(due_date
 expect_fail("due_date past rejected on TaskUpdate", lambda: TaskUpdate(due_date=date.today() - timedelta(days=1)))
 # 14. due_date future accepted on TaskUpdate
 expect_ok("due_date future accepted on TaskUpdate", lambda: TaskUpdate(due_date=date.today() + timedelta(days=1)))
+# 15. blank tag rejected on TaskCreate
+expect_fail("blank tag rejected on TaskCreate", lambda: TaskCreate(title="x", tags=[""]))
+# 16. blank tag rejected on TaskUpdate add_tags
+expect_fail("blank tag rejected on TaskUpdate add_tags", lambda: TaskUpdate(add_tags=["  "]))
+# 17. duplicate tags deduplicated on TaskCreate, first casing preserved
+def _ok_create_duplicate_tags():
+  t = TaskCreate(title="x", tags=["Backend", "backend"])
+  assert len(t.tags) == 1
+  assert t.tags[0] == "Backend"
+
+expect_ok("duplicate tags deduplicated on TaskCreate", _ok_create_duplicate_tags)
+# 18. duplicate add_tags deduplicated on TaskUpdate, first casing preserved
+def _ok_update_duplicate_add_tags():
+  t = TaskUpdate(add_tags=["Backend", "backend"])
+  assert len(t.add_tags) == 1
+  assert t.add_tags[0] == "Backend"
+
+expect_ok("duplicate add_tags deduplicated on TaskUpdate", _ok_update_duplicate_add_tags)
+# 19. single valid tag trimmed and stored on TaskCreate
+def _ok_create_single_tag_trimmed():
+  t = TaskCreate(title="x", tags=[" backend "])
+  assert t.tags == ["backend"]
+
+expect_ok("single valid tag accepted and trimmed on TaskCreate", _ok_create_single_tag_trimmed)
+# 20. multiple distinct valid tags preserved on TaskCreate
+def _ok_create_multiple_tags():
+  t = TaskCreate(title="x", tags=["backend", "frontend", "QA"])
+  assert t.tags == ["backend", "frontend", "QA"]
+
+expect_ok("multiple distinct tags accepted on TaskCreate", _ok_create_multiple_tags)
+# 21. TaskCreate defaults tags to empty list when none provided
+def _ok_create_default_tags_empty():
+  t = TaskCreate(title="x")
+  assert t.tags == []
+
+expect_ok("TaskCreate without tags defaults to empty list", _ok_create_default_tags_empty)
+# 22. valid remove_tags accepted on TaskUpdate
+expect_ok("valid remove_tags accepted on TaskUpdate", lambda: TaskUpdate(remove_tags=["backend", "frontend"]))
+# 23. blank tag rejected on TaskUpdate remove_tags
+expect_fail("blank tag rejected on TaskUpdate remove_tags", lambda: TaskUpdate(remove_tags=[""]))
+# 24. extra='forbid' still rejects unknown field alongside tags
+expect_fail("extra field rejected on TaskCreate with tags", lambda: TaskCreate(title="x", tags=["backend"], made_up="value"))
 print("--- Part A verifications complete ---")
 print("--- Part B verifications complete ---")

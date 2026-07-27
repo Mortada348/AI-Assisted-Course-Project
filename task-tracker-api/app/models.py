@@ -152,6 +152,50 @@ class TaskUpdate(BaseModel):
             raise ValueError("due_date must be a future date")
         return parsed
 
+    @field_validator("add_tags", mode="before")
+    @classmethod
+    def validate_add_tags(cls, v):
+        if v is None:
+            return None
+        if not isinstance(v, list):
+            raise TypeError("add_tags must be a list of strings")
+        cleaned_tags: list[str] = []
+        seen: dict[str, bool] = {}
+        for tag in v:
+            if not isinstance(tag, str):
+                raise TypeError("add_tags must be a list of strings")
+            stripped = tag.strip()
+            if not stripped:
+                raise ValueError("add_tags cannot contain empty or blank values")
+            key = stripped.casefold()
+            if key in seen:
+                continue
+            seen[key] = True
+            cleaned_tags.append(stripped)
+        return cleaned_tags
+
+    @field_validator("remove_tags", mode="before")
+    @classmethod
+    def validate_remove_tags(cls, v):
+        if v is None:
+            return None
+        if not isinstance(v, list):
+            raise TypeError("remove_tags must be a list of strings")
+        cleaned_tags: list[str] = []
+        seen: dict[str, bool] = {}
+        for tag in v:
+            if not isinstance(tag, str):
+                raise TypeError("remove_tags must be a list of strings")
+            stripped = tag.strip()
+            if not stripped:
+                raise ValueError("remove_tags cannot contain empty or blank values")
+            key = stripped.casefold()
+            if key in seen:
+                continue
+            seen[key] = True
+            cleaned_tags.append(stripped)
+        return cleaned_tags
+
 
 class TaskResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

@@ -353,3 +353,405 @@ def test_list_tasks_not_overdue_filter_combined_with_priority_returns_only_match
     tasks = response.json()
     assert len(tasks) == 1
     assert tasks[0]["priority"] == TaskPriority.HIGH.value
+
+# Tags Feature - Create with tags
+def test_create_task_with_single_tag_saves_and_returns_tag(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "Task with tag", "tags": ["backend"]},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["tags"] == ["backend"]
+
+
+def test_create_task_with_multiple_tags_saves_and_returns_all_tags(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend", "urgent", "api"]},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["tags"] == ["backend", "urgent", "api"]
+
+
+def test_create_task_with_duplicate_tags_stores_only_one_instance(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "Task with duplicates", "tags": ["backend", "backend", "api"]},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["tags"] == ["backend", "api"]
+    assert body["tags"].count("backend") == 1
+
+
+def test_create_task_with_case_insensitive_duplicate_tags_stores_one_instance(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "Task with case duplicates", "tags": ["backend", "Backend", "BACKEND"]},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert len(body["tags"]) == 1
+    assert "backend" in [tag.lower() for tag in body["tags"]]
+
+
+def test_create_task_with_empty_tag_returns_422(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "Task with empty tag", "tags": ["backend", "", "api"]},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_task_with_whitespace_only_tag_returns_422(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "Task with whitespace tag", "tags": ["backend", "   ", "api"]},
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_task_with_tags_trims_whitespace_from_tags(client):
+    response = client.post(
+        "/tasks",
+        json={"title": "Task with whitespace", "tags": ["  backend  ", "urgent", "  api  "]},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["tags"] == ["backend", "urgent", "api"]
+
+
+# Tags Feature - Fetch/Get task with tags
+def test_get_task_by_id_returns_all_previously_saved_tags(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend", "urgent", "api"]},
+    )
+    task = create_response.json()
+
+    get_response = client.get(f"/tasks/{task['id']}")
+
+    assert get_response.status_code == 200
+    retrieved_task = get_response.json()
+    assert retrieved_task["tags"] == ["backend", "urgent", "api"]
+
+
+# Tags Feature - Add tags
+def test_patch_add_tags_to_task_with_no_tags_adds_tags(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task without tags"},
+    )
+    task = create_response.json()
+    assert task["tags"] == []
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"add_tags": ["backend", "api"]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert set(updated_task["tags"]) == {"backend", "api"}
+
+
+def test_patch_add_tags_to_task_with_existing_tags_appends_new_tags(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"add_tags": ["frontend", "urgent"]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert set(updated_task["tags"]) == {"backend", "frontend", "urgent"}
+
+
+def test_patch_add_duplicate_tag_to_task_stores_only_one_instance(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"add_tags": ["backend"]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert updated_task["tags"] == ["backend"]
+    assert updated_task["tags"].count("backend") == 1
+
+
+def test_patch_add_case_insensitive_duplicate_tag_to_task_stores_one_instance(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"add_tags": ["Backend", "BACKEND"]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert "backend" in [tag.lower() for tag in updated_task["tags"]]
+    assert len(updated_task["tags"]) == 1
+
+
+def test_patch_add_empty_tag_returns_422(client, created_task):
+    response = client.patch(
+        f"/tasks/{created_task['id']}",
+        json={"add_tags": ["backend", "", "api"]},
+    )
+
+    assert response.status_code == 422
+
+
+def test_patch_add_whitespace_only_tag_returns_422(client, created_task):
+    response = client.patch(
+        f"/tasks/{created_task['id']}",
+        json={"add_tags": ["backend", "   ", "api"]},
+    )
+
+    assert response.status_code == 422
+
+
+def test_patch_add_tags_trims_whitespace(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"add_tags": ["  frontend  ", "  urgent  "]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert set(updated_task["tags"]) == {"backend", "frontend", "urgent"}
+
+
+# Tags Feature - Remove tags
+def test_patch_remove_tag_from_task_removes_only_that_tag(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend", "frontend", "urgent"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"remove_tags": ["frontend"]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert set(updated_task["tags"]) == {"backend", "urgent"}
+
+
+def test_patch_remove_multiple_tags_from_task(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend", "frontend", "urgent", "api"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"remove_tags": ["frontend", "urgent"]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert set(updated_task["tags"]) == {"backend", "api"}
+
+
+def test_patch_remove_nonexistent_tag_returns_422(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"remove_tags": ["nonexistent"]},
+    )
+
+    assert patch_response.status_code == 422
+    error = patch_response.json()
+    assert "detail" in error
+
+
+def test_patch_remove_case_insensitive_matching_tag(client):
+    create_response = client.post(
+        "/tasks",
+        json={"title": "Task with tags", "tags": ["backend", "frontend"]},
+    )
+    task = create_response.json()
+
+    patch_response = client.patch(
+        f"/tasks/{task['id']}",
+        json={"remove_tags": ["Backend"]},
+    )
+
+    assert patch_response.status_code == 200
+    updated_task = patch_response.json()
+    assert updated_task["tags"] == ["frontend"]
+
+
+def test_patch_remove_empty_tag_returns_422(client, created_task):
+    response = client.patch(
+        f"/tasks/{created_task['id']}",
+        json={"remove_tags": [""]},
+    )
+
+    assert response.status_code == 422
+
+
+def test_patch_remove_whitespace_only_tag_returns_422(client, created_task):
+    response = client.patch(
+        f"/tasks/{created_task['id']}",
+        json={"remove_tags": ["   "]},
+    )
+
+    assert response.status_code == 422
+
+
+# Tags Feature - Filter by tag
+def test_list_tasks_filter_by_tag_returns_only_tasks_with_that_tag(client):
+    client.post("/tasks", json={"title": "Backend task", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Frontend task", "tags": ["frontend"]})
+    client.post("/tasks", json={"title": "Full stack", "tags": ["backend", "frontend"]})
+
+    response = client.get("/tasks", params={"tag": "backend"})
+
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 2
+    assert all("backend" in task["tags"] for task in tasks)
+
+
+def test_list_tasks_filter_by_tag_case_insensitive_matching(client):
+    client.post("/tasks", json={"title": "Backend task", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Frontend task", "tags": ["frontend"]})
+
+    response_lower = client.get("/tasks", params={"tag": "backend"})
+    response_upper = client.get("/tasks", params={"tag": "BACKEND"})
+    response_mixed = client.get("/tasks", params={"tag": "BackEnd"})
+
+    assert response_lower.status_code == 200
+    assert response_upper.status_code == 200
+    assert response_mixed.status_code == 200
+    assert len(response_lower.json()) == 1
+    assert len(response_upper.json()) == 1
+    assert len(response_mixed.json()) == 1
+
+
+def test_list_tasks_filter_by_tag_with_no_matches_returns_empty_list(client):
+    client.post("/tasks", json={"title": "Backend task", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Frontend task", "tags": ["frontend"]})
+
+    response = client.get("/tasks", params={"tag": "nonexistent"})
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_tasks_without_tag_filter_returns_all_tasks(client):
+    client.post("/tasks", json={"title": "Task 1", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Task 2", "tags": ["frontend"]})
+    client.post("/tasks", json={"title": "Task 3"})
+
+    response = client.get("/tasks")
+
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 3
+
+
+def test_list_tasks_filter_by_tag_combined_with_status_filter(client):
+    client.post("/tasks", json={"title": "Backend ToDo", "tags": ["backend"], "status": TaskStatus.TODO.value})
+    client.post("/tasks", json={"title": "Backend Done", "tags": ["backend"], "status": TaskStatus.IN_PROGRESS.value})
+    client.post("/tasks", json={"title": "Frontend ToDo", "tags": ["frontend"], "status": TaskStatus.TODO.value})
+
+    response = client.get("/tasks", params={"tag": "backend", "status": TaskStatus.TODO.value})
+
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Backend ToDo"
+
+
+def test_list_tasks_filter_by_tag_combined_with_priority_filter(client):
+    client.post("/tasks", json={"title": "Backend High", "tags": ["backend"], "priority": TaskPriority.HIGH.value})
+    client.post("/tasks", json={"title": "Backend Low", "tags": ["backend"], "priority": TaskPriority.LOW.value})
+    client.post("/tasks", json={"title": "Frontend High", "tags": ["frontend"], "priority": TaskPriority.HIGH.value})
+
+    response = client.get("/tasks", params={"tag": "backend", "priority": TaskPriority.HIGH.value})
+
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 1
+    assert tasks[0]["title"] == "Backend High"
+
+
+# Tags Feature - Search by tag
+def test_search_tasks_by_existing_tag_returns_all_tasks_with_that_tag(client):
+    client.post("/tasks", json={"title": "Backend task 1", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Frontend task", "tags": ["frontend"]})
+    client.post("/tasks", json={"title": "Backend task 2", "tags": ["backend", "api"]})
+
+    response = client.get("/tasks/search", params={"tag": "backend"})
+
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 2
+    assert all("backend" in task["tags"] for task in tasks)
+
+
+def test_search_tasks_by_tag_is_case_insensitive(client):
+    client.post("/tasks", json={"title": "Backend task", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Frontend task", "tags": ["frontend"]})
+
+    response_lower = client.get("/tasks/search", params={"tag": "backend"})
+    response_upper = client.get("/tasks/search", params={"tag": "BACKEND"})
+    response_mixed = client.get("/tasks/search", params={"tag": "BackEnd"})
+
+    assert response_lower.status_code == 200
+    assert response_upper.status_code == 200
+    assert response_mixed.status_code == 200
+    assert len(response_lower.json()) == 1
+    assert len(response_upper.json()) == 1
+    assert len(response_mixed.json()) == 1
+
+
+def test_search_tasks_by_nonexistent_tag_returns_empty_list(client):
+    client.post("/tasks", json={"title": "Backend task", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Frontend task", "tags": ["frontend"]})
+
+    response = client.get("/tasks/search", params={"tag": "nonexistent"})
+
+    assert response.status_code == 200
+    assert response.json() == []
