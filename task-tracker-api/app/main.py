@@ -19,7 +19,8 @@ app = FastAPI(
     description=(
         "A learning-focused REST API for creating, viewing, filtering, "
         "updating, assigning, validating, and deleting tasks. "
-        "Uses JSON file storage as described in ADR-001."
+        "Storage is in-memory only (a module-level dict); all data is "
+        "lost on process restart."
     ),
     version="0.1.0",
 )
