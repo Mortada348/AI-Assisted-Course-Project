@@ -14,7 +14,15 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health", response_model=HealthResponse, summary="Health check")
 def get_health() -> HealthResponse:
-    """Return a simple status payload confirming the API is up and running."""
+    """Return a simple status payload confirming the API is up and running.
+
+    Returns:
+        HealthResponse: Contains a static "ok" status and the current UTC
+        timestamp in ISO 8601 format.
+
+    Example:
+        GET /health
+    """
     return HealthResponse(
         status="ok",
         timestamp=datetime.now(timezone.utc).isoformat(),

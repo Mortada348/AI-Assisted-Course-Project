@@ -31,6 +31,18 @@ class TaskCreate(BaseModel):
     @field_validator("title")
     @classmethod
     def validate_title(cls, v: str) -> str:
+        """Strip whitespace and enforce title constraints.
+
+        Args:
+            v: The raw title string.
+
+        Returns:
+            str: The stripped title.
+
+        Raises:
+            ValueError: If the stripped title is empty, or longer than
+                200 characters.
+        """
         stripped = v.strip()
         if not stripped:
             raise ValueError("title cannot be blank")
@@ -41,6 +53,21 @@ class TaskCreate(BaseModel):
     @field_validator("tags", mode="before")
     @classmethod
     def validate_tags(cls, v):
+        """Normalize and deduplicate the tags list before other validation.
+
+        Args:
+            v: The raw tags value from the input payload.
+
+        Returns:
+            list[str]: An empty list if `v` is None; otherwise, stripped
+            tags with case-insensitive duplicates removed (first
+            occurrence kept).
+
+        Raises:
+            TypeError: If `v` is not a list, or contains a non-string
+                element.
+            ValueError: If a tag is empty or blank after stripping.
+        """
         if v is None:
             return []
         if not isinstance(v, list):
@@ -63,6 +90,22 @@ class TaskCreate(BaseModel):
     @field_validator("due_date", mode="before")
     @classmethod
     def validate_due_date(cls, v):
+        """Parse and validate that a due date is set in the future.
+
+        Args:
+            v: The raw due_date value — may be None, an empty string, a
+                `datetime`, a `date`, or a string in ISO format.
+
+        Returns:
+            Optional[date]: None if `v` is None or an empty string;
+            otherwise the parsed `date`.
+
+        Raises:
+            ValueError: If `v` is a `datetime`/`date` that is not strictly
+                after the current moment/today, if the string cannot be
+                parsed as an ISO date, or if the parsed date is not
+                strictly after today.
+        """
         if v is None or v == "":
             return None
         if isinstance(v, datetime):
@@ -99,6 +142,19 @@ class TaskUpdate(BaseModel):
     @field_validator("title")
     @classmethod
     def validate_title(cls, v: Optional[str]) -> Optional[str]:
+        """Strip whitespace and enforce title constraints, allowing unset values.
+
+        Args:
+            v: The raw title value, or None if not provided.
+
+        Returns:
+            Optional[str]: None if `v` is None; otherwise the stripped
+            title.
+
+        Raises:
+            ValueError: If the stripped title is empty, or longer than
+                200 characters.
+        """
         if v is None:
             return v
         stripped = v.strip()
@@ -111,6 +167,21 @@ class TaskUpdate(BaseModel):
     @field_validator("tags", mode="before")
     @classmethod
     def validate_tags(cls, v):
+        """Normalize and deduplicate the tags list before other validation.
+
+        Args:
+            v: The raw tags value from the input payload.
+
+        Returns:
+            list[str]: An empty list if `v` is None; otherwise, stripped
+            tags with case-insensitive duplicates removed (first
+            occurrence kept).
+
+        Raises:
+            TypeError: If `v` is not a list, or contains a non-string
+                element.
+            ValueError: If a tag is empty or blank after stripping.
+        """
         if v is None:
             return []
         if not isinstance(v, list):
@@ -133,6 +204,22 @@ class TaskUpdate(BaseModel):
     @field_validator("due_date", mode="before")
     @classmethod
     def validate_due_date(cls, v):
+        """Parse and validate that a due date is set in the future.
+
+        Args:
+            v: The raw due_date value — may be None, an empty string, a
+                `datetime`, a `date`, or a string in ISO format.
+
+        Returns:
+            Optional[date]: None if `v` is None or an empty string;
+            otherwise the parsed `date`.
+
+        Raises:
+            ValueError: If `v` is a `datetime`/`date` that is not strictly
+                after the current moment/today, if the string cannot be
+                parsed as an ISO date, or if the parsed date is not
+                strictly after today.
+        """
         if v is None or v == "":
             return None
         if isinstance(v, datetime):
@@ -155,6 +242,21 @@ class TaskUpdate(BaseModel):
     @field_validator("add_tags", mode="before")
     @classmethod
     def validate_add_tags(cls, v):
+        """Normalize and deduplicate tags to add, if provided.
+
+        Args:
+            v: The raw add_tags value, or None if not provided.
+
+        Returns:
+            Optional[list[str]]: None if `v` is None; otherwise stripped
+            tags with case-insensitive duplicates removed (first
+            occurrence kept).
+
+        Raises:
+            TypeError: If `v` is not a list, or contains a non-string
+                element.
+            ValueError: If a tag is empty or blank after stripping.
+        """
         if v is None:
             return None
         if not isinstance(v, list):
@@ -177,6 +279,21 @@ class TaskUpdate(BaseModel):
     @field_validator("remove_tags", mode="before")
     @classmethod
     def validate_remove_tags(cls, v):
+        """Normalize and deduplicate tags to remove, if provided.
+
+        Args:
+            v: The raw remove_tags value, or None if not provided.
+
+        Returns:
+            Optional[list[str]]: None if `v` is None; otherwise stripped
+            tags with case-insensitive duplicates removed (first
+            occurrence kept).
+
+        Raises:
+            TypeError: If `v` is not a list, or contains a non-string
+                element.
+            ValueError: If a tag is empty or blank after stripping.
+        """
         if v is None:
             return None
         if not isinstance(v, list):

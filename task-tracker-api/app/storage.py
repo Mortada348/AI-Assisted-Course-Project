@@ -20,6 +20,15 @@ def _with_computed_overdue(task: TaskResponse) -> TaskResponse:
 
 
 def add_task(payload: TaskCreate) -> TaskResponse:
+    """Create and store a new task from validated input.
+
+    Args:
+        payload: Validated task-creation data.
+
+    Returns:
+        TaskResponse: The newly stored task, with a generated `id`,
+        `created_at`/`updated_at` timestamps, and computed `is_overdue`.
+    """
     now = datetime.now(timezone.utc)
     task_id = str(uuid.uuid4())
     task = TaskResponse(
@@ -44,6 +53,21 @@ def get_all_tasks(
     priority: Optional[TaskPriority] = None,
     not_overdue: Optional[bool] = None,
 ) -> list[TaskResponse]:
+    """Return all stored tasks, optionally filtered.
+
+    Args:
+        status: Only include tasks with this status. If None, no
+            status filtering is applied.
+        priority: Only include tasks with this priority. If None, no
+            priority filtering is applied.
+        not_overdue: If True, only include tasks that have a due date and
+            are not overdue. If None or False, no overdue-based filtering
+            is applied.
+
+    Returns:
+        list[TaskResponse]: Matching tasks, each with `is_overdue`
+        recomputed against the current date.
+    """
     tasks = [_with_computed_overdue(t) for t in _tasks.values()]
     if status is not None:
         tasks = [t for t in tasks if t.status == status]
@@ -55,6 +79,15 @@ def get_all_tasks(
 
 
 def get_task_by_id(task_id: str) -> Optional[TaskResponse]:
+    """Look up a single task by id.
+
+    Args:
+        task_id: The id of the task to look up.
+
+    Returns:
+        Optional[TaskResponse]: The task with `is_overdue` recomputed, or
+        None if no task with that id exists.
+    """
     task = _tasks.get(task_id)
     if task is None:
         return None
@@ -62,18 +95,56 @@ def get_task_by_id(task_id: str) -> Optional[TaskResponse]:
 
 
 def get_tasks_by_tag(tag: str) -> list[TaskResponse]:
+    """Return all tasks with a tag exactly matching the given value.
+
+    Args:
+        tag: Tag to match, case-insensitively, against each task's tags.
+
+    Returns:
+        list[TaskResponse]: Tasks containing a tag equal to `tag`
+        (case-insensitive comparison).
+    """
     normalized = tag.strip().casefold()
     tasks = [_with_computed_overdue(t) for t in _tasks.values()]
     return [t for t in tasks if any((tg or "").casefold() == normalized for tg in (t.tags or []))]
 
 
 def search_tasks_by_tag(query: str) -> list[TaskResponse]:
+    """Return all tasks with a tag containing the given query.
+
+    Args:
+        query: Substring to search for, matched case-insensitively against
+            each task's tags.
+
+    Returns:
+        list[TaskResponse]: Tasks with at least one tag that contains
+        `query` (case-insensitive substring match).
+    """
     normalized = query.strip().casefold()
     tasks = [_with_computed_overdue(t) for t in _tasks.values()]
-    return [t for t in tasks if any((tg or "").casefold() == normalized for tg in (t.tags or []))]
+    return [t for t in tasks if any(normalized in (tg or "").casefold() for tg in (t.tags or []))]
 
 
 def update_task(task_id: str, payload: TaskUpdate) -> Optional[TaskResponse]:
+    """Apply a partial update to a stored task.
+
+    Args:
+        task_id: The id of the task to update.
+        payload: Fields to update; only fields explicitly set are applied.
+            `add_tags` and `remove_tags` are handled separately from the
+            other fields, modifying the task's tag list rather than
+            replacing it.
+
+    Returns:
+        Optional[TaskResponse]: The updated task with a refreshed
+        `updated_at` timestamp and recomputed `is_overdue`. Returns the
+        unchanged task if no fields were set. Returns None if no task
+        with `task_id` exists.
+
+    Raises:
+        HTTPException: 422 (via `validate_tag_removal`) if a tag in
+            `payload.remove_tags` does not exist on the task.
+    """
     task = _tasks.get(task_id)
     if task is None:
         return None
@@ -113,6 +184,15 @@ def update_task(task_id: str, payload: TaskUpdate) -> Optional[TaskResponse]:
 
 
 def delete_task(task_id: str) -> bool:
+    """Delete a task by id.
+
+    Args:
+        task_id: The id of the task to delete.
+
+    Returns:
+        bool: True if a task was found and deleted, False if no task with
+        that id existed.
+    """
     if task_id not in _tasks:
         return False
     del _tasks[task_id]

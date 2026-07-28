@@ -755,3 +755,14 @@ def test_search_tasks_by_nonexistent_tag_returns_empty_list(client):
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_search_tasks_by_tag_matches_partial_substring(client):
+    client.post("/tasks", json={"title": "Backend task", "tags": ["backend"]})
+    client.post("/tasks", json={"title": "Frontend task", "tags": ["frontend"]})
+
+    response = client.get("/tasks/search", params={"tag": "end"})
+
+    assert response.status_code == 200
+    tasks = response.json()
+    assert len(tasks) == 2
