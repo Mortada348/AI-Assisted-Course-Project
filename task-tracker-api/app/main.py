@@ -92,8 +92,12 @@ def update_task(task_id: str, payload: TaskUpdate) -> TaskResponse:
         if existing is None:
             raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
     if payload.status is not None and existing is not None:
-        if payload.status != existing.status:
-            validate_status_transition(existing.status, payload.status)
+        if payload.status == existing.status:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Status is already {payload.status.value}",
+            )
+        validate_status_transition(existing.status, payload.status)
     if existing is not None:
         if "tag_to_remove" in updates:
             validate_tag_removal(existing.tags, updates["tag_to_remove"])
