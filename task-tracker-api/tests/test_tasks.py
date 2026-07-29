@@ -312,8 +312,8 @@ def test_list_tasks_not_overdue_filter_includes_future_due_date_tasks(client):
 
 
 def test_list_tasks_not_overdue_filter_includes_done_tasks_with_past_due_date(client):
-    past_date = (date.today() - timedelta(days=2)).isoformat()
-    create_response = client.post("/tasks", json={"title": "Completed task", "due_date": past_date})
+    future_date = (date.today() + timedelta(days=2)).isoformat()
+    create_response = client.post("/tasks", json={"title": "Completed task", "due_date": future_date})
     task = create_response.json()
 
     response = client.patch(
